@@ -2,12 +2,11 @@ package ru.fefu.starwarsexplorer.ui.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import ru.fefu.starwarsexplorer.data.model.Person
 import ru.fefu.starwarsexplorer.data.repository.SwapiRepository
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.LiveData
 
 sealed class PersonDetailUiState {
     object Loading : PersonDetailUiState()
@@ -17,17 +16,20 @@ sealed class PersonDetailUiState {
 
 class PersonDetailViewModel(private val repository: SwapiRepository) : ViewModel() {
 
-    var uiState by mutableStateOf<PersonDetailUiState>(PersonDetailUiState.Loading)
-        private set
+    private val _uiState = MutableLiveData<PersonDetailUiState>(PersonDetailUiState.Loading)
+    val uiState: LiveData<PersonDetailUiState>
+        get() = _uiState
 
     fun loadPerson(id: Int) {
-        uiState = PersonDetailUiState.Loading
+        _uiState.value = PersonDetailUiState.Loading
         viewModelScope.launch {
             try {
                 val person = repository.getPerson(id)
-                uiState = PersonDetailUiState.Success(person)
+                _uiState.value = PersonDetailUiState.Success(person)
             } catch (e: Exception) {
-                uiState = PersonDetailUiState.Error(e.localizedMessage ?: "Unknown error")
+                _uiState.value = PersonDetailUiState.Error(
+                    e.localizedMessage ?: "Unknown error"
+                )
             }
         }
     }

@@ -27,7 +27,9 @@ class PeopleListViewModel(private val repository: SwapiRepository) : ViewModel()
                 val people = repository.getPeople(search)
                 uiState = PeopleUiState.Success(people)
             } catch (e: Exception) {
-                uiState = PeopleUiState.Error(e.localizedMessage ?: "Unknown error")
+                uiState = PeopleUiState.Error(
+                    e.localizedMessage ?: "Unknown error"
+                )
             }
         }
     }

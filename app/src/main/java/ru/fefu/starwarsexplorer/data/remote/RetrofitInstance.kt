@@ -6,19 +6,19 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitInstance {
-    private val logging = HttpLoggingInterceptor().apply {
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(logging)
+    private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor(loggingInterceptor)
         .build()
 
     val api: SwapiApi by lazy {
         Retrofit.Builder()
             .baseUrl("https://swapi.dev/api/")
             .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
+            .client(okHttpClient)
             .build()
             .create(SwapiApi::class.java)
     }

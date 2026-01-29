@@ -17,6 +17,8 @@ import androidx.navigation.NavController
 import ru.fefu.starwarsexplorer.ui.favorites.FavoritesViewModel
 import androidx.compose.foundation.shape.RoundedCornerShape
 
+import androidx.compose.runtime.livedata.observeAsState
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonDetailScreen(
@@ -25,7 +27,11 @@ fun PersonDetailScreen(
     personId: Int,
     navController: NavController
 ) {
-    LaunchedEffect(personId) { viewModel.loadPerson(personId) }
+    val uiState by viewModel.uiState.observeAsState(PersonDetailUiState.Loading)
+
+    LaunchedEffect(personId) {
+        viewModel.loadPerson(personId)
+    }
 
     Scaffold(
         topBar = {
@@ -51,7 +57,7 @@ fun PersonDetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (val state = viewModel.uiState) {
+            when (uiState) {
                 is PersonDetailUiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -64,6 +70,7 @@ fun PersonDetailScreen(
                     }
                 }
                 is PersonDetailUiState.Error -> {
+                    val state = uiState as PersonDetailUiState.Error
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -91,12 +98,9 @@ fun PersonDetailScreen(
                     }
                 }
                 is PersonDetailUiState.Success -> {
+                    val state = uiState as PersonDetailUiState.Success
                     val p = state.person
-                    val isFavorite by remember {
-                        derivedStateOf {
-                            favoritesViewModel.isFavorite(personId)
-                        }
-                    }
+                    val isFavorite = favoritesViewModel.isFavorite(personId)
 
                     Column(
                         modifier = Modifier

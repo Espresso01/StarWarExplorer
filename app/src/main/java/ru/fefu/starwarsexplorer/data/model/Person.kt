@@ -10,4 +10,7 @@ data class Person(
     val birth_year: String,
     val gender: String,
     val url: String
-)
+) {
+    val id: Int
+        get() = url.split("/").filter { it.isNotBlank() }.last().toIntOrNull() ?: 0
+}

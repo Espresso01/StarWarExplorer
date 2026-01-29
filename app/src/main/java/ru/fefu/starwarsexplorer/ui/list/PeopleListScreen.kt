@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -18,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import ru.fefu.starwarsexplorer.ui.favorites.FavoritesViewModel
-import androidx.compose.foundation.shape.CircleShape
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,7 +30,14 @@ fun PeopleListScreen(
 ) {
     var search by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) { viewModel.loadPeople() }
+    LaunchedEffect(Unit) {
+        viewModel.loadPeople()
+    }
+
+    LaunchedEffect(search) {
+        delay(400)
+        viewModel.loadPeople(search.takeIf { it.isNotBlank() })
+    }
 
     Scaffold(
         topBar = {
@@ -41,154 +49,109 @@ fun PeopleListScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .border(2.dp, Color.Red, CircleShape)
-                            .padding(8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
                             contentDescription = "Favorites",
-                            tint = Color.Red,
-                            modifier = Modifier.size(24.dp)
+                            tint = Color.Red
                         )
                     }
                 }
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
                 .padding(16.dp)
         ) {
             TextField(
                 value = search,
-                onValueChange = {
-                    search = it
-                    viewModel.loadPeople(search)
-                },
+                onValueChange = { search = it },
                 label = { Text("Поиск") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedIndicatorColor = Color.Red,
-                    unfocusedIndicatorColor = Color.Gray,
-                    focusedLabelColor = Color.Red,
-                    unfocusedLabelColor = Color.Gray
-                )
+                shape = RoundedCornerShape(12.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             when (val state = viewModel.uiState) {
                 is PeopleUiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            color = Color.Red,
-                            strokeWidth = 4.dp
-                        )
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        CircularProgressIndicator(color = Color.Red)
                     }
                 }
-                is PeopleUiState.Error -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Ошибка: ${state.message}",
-                            color = Color.Red,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        FloatingActionButton(
-                            onClick = { viewModel.loadPeople(search) },
-                            containerColor = Color.Red,
-                            contentColor = Color.White
+
+                is PeopleUiState.Error -> {
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Retry"
+                            Text(
+                                text = "Ошибка: ${state.message}",
+                                color = Color.Red,
+                                style = MaterialTheme.typography.titleMedium
                             )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            FloatingActionButton(
+                                onClick = { viewModel.loadPeople(search.takeIf { it.isNotBlank() }) },
+                                containerColor = Color.Red,
+                                contentColor = Color.White
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Retry"
+                                )
+                            }
                         }
                     }
                 }
+
                 is PeopleUiState.Success -> {
                     if (state.people.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Персонажи не найдены",
-                                color = Color.Gray
-                            )
+                        Box(Modifier.fillMaxSize(), Alignment.Center) {
+                            Text("Персонажи не найдены")
                         }
                     } else {
                         LazyColumn {
                             items(state.people) { person ->
-                                val isFavorite by remember {
-                                    derivedStateOf {
-                                        favoritesViewModel.isFavorite(
-                                            person.url.split("/").filter { it.isNotEmpty() }.last().toInt()
-                                        )
-                                    }
-                                }
+                                val isFavorite = favoritesViewModel.isFavorite(person.id)
+
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp)
-                                        .clickable {val id = person.url.split("/")
-                                            .filter { it.isNotEmpty() }.last()
-                                            navController.navigate("detail/$id")}
+                                        .clickable {
+                                            navController.navigate("detail/${person.id}")
+                                        }
                                         .border(2.dp, Color.Red, RoundedCornerShape(12.dp)),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                    )
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(16.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
                                             text = person.name,
-                                            style = MaterialTheme.typography.titleMedium,
                                             modifier = Modifier.weight(1f)
                                         )
 
                                         IconButton(
                                             onClick = {
-                                                val id = person.url.split("/")
-                                                    .filter { it.isNotEmpty() }.last().toInt()
-                                                if (isFavorite) {
-                                                    favoritesViewModel.removeFavorite(id)
-                                                } else {
-                                                    favoritesViewModel.addFavorite(id)
-                                                }
-                                            },
-                                            modifier = Modifier.size(48.dp)
+                                                favoritesViewModel.toggleFavorite(person.id)
+                                            }
                                         ) {
                                             Icon(
-                                                imageVector = if (isFavorite) Icons.Default.Favorite
-                                                else Icons.Default.FavoriteBorder,
-                                                contentDescription = if (isFavorite)
-                                                    "Remove from favorites"
-                                                else "Add to favorites",
-                                                tint = if (isFavorite) Color.Red
-                                                else MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier.size(24.dp)
+                                                imageVector = if (isFavorite)
+                                                    Icons.Default.Favorite
+                                                else
+                                                    Icons.Default.FavoriteBorder,
+                                                contentDescription = null,
+                                                tint = if (isFavorite) Color.Red else Color.Gray
                                             )
                                         }
                                     }

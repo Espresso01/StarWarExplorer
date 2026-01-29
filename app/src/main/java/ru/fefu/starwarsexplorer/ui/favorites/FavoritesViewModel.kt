@@ -1,64 +1,26 @@
 package ru.fefu.starwarsexplorer.ui.favorites
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import ru.fefu.starwarsexplorer.data.model.Person
-import ru.fefu.starwarsexplorer.data.repository.SwapiRepository
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
-sealed class FavoritesUiState {
-    object Loading : FavoritesUiState()
-    data class Success(val favorites: List<Person>) : FavoritesUiState()
-    data class Error(val message: String) : FavoritesUiState()
-}
+class FavoritesViewModel : ViewModel() {
+    private var _favoriteIds: Set<Int> by mutableStateOf(emptySet())
 
-class FavoritesViewModel(private val repository: SwapiRepository) : ViewModel() {
-
-    private val _favoriteIds = mutableStateOf<Set<Int>>(emptySet())
-    var favoriteIds: Set<Int> by _favoriteIds
-        private set
-
-    var uiState by mutableStateOf<FavoritesUiState>(FavoritesUiState.Loading)
-        private set
+    val favoriteIds: Set<Int>
+        get() = _favoriteIds
 
     fun addFavorite(id: Int) {
-        _favoriteIds.value = _favoriteIds.value + id
-        loadFavorites()
+        _favoriteIds = _favoriteIds + id
     }
 
     fun removeFavorite(id: Int) {
-        _favoriteIds.value = _favoriteIds.value - id
-        loadFavorites()
+        _favoriteIds = _favoriteIds - id
     }
 
     fun isFavorite(id: Int): Boolean {
-        return favoriteIds.contains(id)
-    }
-
-    fun loadFavorites() {
-        if (favoriteIds.isEmpty()) {
-            uiState = FavoritesUiState.Success(emptyList())
-            return
-        }
-
-        uiState = FavoritesUiState.Loading
-        viewModelScope.launch {
-            try {
-                val favorites = mutableListOf<Person>()
-                favoriteIds.forEach { id ->
-                    try {
-                        val person = repository.getPerson(id)
-                        favorites.add(person)
-                    } catch (e: Exception) {
-                    }
-                }
-                uiState = FavoritesUiState.Success(favorites)
-            } catch (e: Exception) {
-                uiState = FavoritesUiState.Error(e.localizedMessage ?: "Unknown error")
-            }
-        }
+        return id in _favoriteIds
     }
 
     fun toggleFavorite(id: Int) {
